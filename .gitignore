@@ -1,0 +1,25 @@
+# Environment
+.env
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Database — don't commit predictions
+data/predictions.db
+
+# Vector store — will be rebuilt on deploy
+data/vector_store/
+
+# Eval results — generated file
+evals/eval_results.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,20 @@
+# Core agent framework
+langgraph==0.2.28
+langchain==0.3.7
+langchain-groq==0.2.1
+langchain-community==0.3.7
+# API framework
+fastapi==0.115.4
+uvicorn==0.32.0
+# UI
+streamlit==1.40.0
+# Vector DB
+chromadb==0.5.18
+# Data and validation
+pydantic==2.9.2
+python-dotenv==1.0.1
+requests==2.32.3
+# Database
+sqlalchemy==2.0.35
+# Utilities
+tenacity==9.0.0
