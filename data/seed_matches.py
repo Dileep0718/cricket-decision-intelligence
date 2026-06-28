@@ -215,26 +215,37 @@ HISTORICAL_SCENARIOS = [
 ]
 
 
+def _get_client():
+    """
+    Returns the right ChromaDB client based on environment.
+    Streamlit Cloud has a read-only filesystem so we use
+    in-memory client there. Render and local use persistent.
+    """
+    import os
+    # Streamlit Cloud sets this env var
+    is_streamlit_cloud = os.getenv("STREAMLIT_SHARING_MODE") or \
+                         os.getenv("IS_STREAMLIT_CLOUD") or \
+                         not os.access(os.path.dirname(VECTOR_STORE_PATH), os.W_OK)
+    if is_streamlit_cloud:
+        print("Using in-memory ChromaDB (Streamlit Cloud)")
+        return chromadb.EphemeralClient()
+    else:
+        print("Using persistent ChromaDB")
+        return chromadb.PersistentClient(path=VECTOR_STORE_PATH)
+
+
 def seed_vector_store():
-    """
-    Loads all historical scenarios into ChromaDB.
-    Run this once before starting the app.
-    """
+    """Loads all historical scenarios into ChromaDB."""
     print("Initializing ChromaDB...")
-
-    client = chromadb.PersistentClient(path=VECTOR_STORE_PATH)
-
-    # Use default embedding function
+    client = _get_client()
     ef = embedding_functions.DefaultEmbeddingFunction()
 
-    # Create or get collection
     collection = client.get_or_create_collection(
         name="cricket_scenarios",
         embedding_function=ef,
         metadata={"description": "Historical cricket match scenarios and decisions"}
     )
 
-    # Check if already seeded
     existing = collection.count()
     if existing >= len(HISTORICAL_SCENARIOS):
         print(f"Vector store already seeded with {existing} scenarios. Skipping.")
@@ -242,13 +253,11 @@ def seed_vector_store():
 
     print(f"Seeding {len(HISTORICAL_SCENARIOS)} historical scenarios...")
 
-    # Prepare data for ChromaDB
     documents = []
     metadatas = []
     ids = []
 
     for scenario in HISTORICAL_SCENARIOS:
-        # The document is what gets embedded and searched
         doc = (
             f"Situation: {scenario['situation']} "
             f"Decision: {scenario['decision']} "
@@ -265,7 +274,6 @@ def seed_vector_store():
         })
         ids.append(scenario["id"])
 
-    # Add to collection
     collection.add(
         documents=documents,
         metadatas=metadatas,
@@ -279,12 +287,24 @@ def seed_vector_store():
 
 def get_collection():
     """Returns the ChromaDB collection. Used by retriever."""
-    client = chromadb.PersistentClient(path=VECTOR_STORE_PATH)
+    client = _get_client()
     ef = embedding_functions.DefaultEmbeddingFunction()
-    return client.get_or_create_collection(
+
+    collection = client.get_or_create_collection(
         name="cricket_scenarios",
         embedding_function=ef
     )
+
+    # Re-seed if empty (happens with ephemeral client on each startup)
+    if collection.count() == 0:
+        print("Collection empty — re-seeding...")
+        seed_vector_store()
+        collection = client.get_or_create_collection(
+            name="cricket_scenarios",
+            embedding_function=ef
+        )
+
+    return collection
 
 
 if __name__ == "__main__":
