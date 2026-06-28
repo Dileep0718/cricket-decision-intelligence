@@ -1,7 +1,9 @@
 import streamlit as st
 import requests
+import os
 
-API_BASE = "http://localhost:8000"
+
+API_BASE = os.getenv("API_BASE","http://localhost:8000")
 
 
 def render_match_sidebar() -> dict | None:

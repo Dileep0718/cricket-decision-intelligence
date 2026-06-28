@@ -8,7 +8,7 @@ from frontend.components.match_view import render_match_sidebar, render_match_he
 from frontend.components.metrics_view import render_metrics
 from frontend.components.agent_trace import render_agent_trace, render_recommendation
 
-API_BASE = "http://localhost:8000"
+API_BASE = os.getenv("API_BASE","http://localhost:8000")
 
 # ── Page config ───────────────────────────────────────────────────────────
 st.set_page_config(
