@@ -3,7 +3,7 @@ import requests
 import os
 
 
-API_BASE = os.getenv("API_BASE","http://localhost:8000")
+API_BASE = os.getenv("API_BASE_URL","https://cricket-ai-backend-g4zr.onrender.com")
 
 
 def render_match_sidebar() -> dict | None:
