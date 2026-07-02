@@ -121,11 +121,6 @@ def calculate_win_probability(state: MatchState) -> float:
     """
     Win probability for batting team (0-100%).
     Handles ODI, T20, and TEST matches.
-
-    Uses a resource-based model:
-        - How many runs are needed vs resources remaining
-        - Resources = balls remaining × wickets in hand (normalized)
-        - Calibrated per match type
     """
     # ── TEST match ────────────────────────────────────────────────────
     if state.match_type == "TEST":
@@ -136,7 +131,6 @@ def calculate_win_probability(state: MatchState) -> float:
             return 100.0
         wickets_in_hand = 10 - state.wickets
         balls_remaining = max(1, state.balls_remaining)
-        # Test: can score ~3.5 RPO on average
         achievable = (balls_remaining / 6) * 3.5
         if wickets_in_hand <= 2:
             achievable *= 0.4
@@ -169,29 +163,41 @@ def calculate_win_probability(state: MatchState) -> float:
     if wickets_in_hand <= 0:
         return 2.0
 
-    # Calibrated max scoring rates per match type
-    max_rpo = 9.5 if state.match_type == "ODI" else 13.0
-    wicket_factor = (wickets_in_hand / 10) ** 0.6
+    # Realistic max RPO — ODI teams rarely sustain above 8.5
+    # T20 teams can push to 11-12 in death
+    max_rpo = 8.0 if state.match_type == "ODI" else 11.5
+
+    # Wicket factor — losing wickets severely limits scoring
+    # Using power 0.8 makes it more punishing than before
+    wicket_factor = (wickets_in_hand / 10) ** 0.8
+
     achievable_runs = (balls_remaining / 6) * max_rpo * wicket_factor
 
     # How achievable is the target?
     ratio = achievable_runs / max(runs_needed, 1)
 
-    # Map ratio to probability with a sigmoid-like curve
+    # Sigmoid curve — calibrated so:
+    # ratio 0.6 → ~10%, ratio 0.8 → ~25%, ratio 1.0 → ~50%
+    # ratio 1.2 → ~68%, ratio 1.5 → ~80%, ratio 2.0 → ~90%
     if ratio >= 2.0:
         win_prob = 90.0
     elif ratio >= 1.5:
-        win_prob = 75.0 + (ratio - 1.5) * 30
+        win_prob = 80.0 + (ratio - 1.5) * 20
+    elif ratio >= 1.2:
+        win_prob = 68.0 + (ratio - 1.2) * 40
     elif ratio >= 1.0:
-        win_prob = 50.0 + (ratio - 1.0) * 50
+        win_prob = 50.0 + (ratio - 1.0) * 90
+    elif ratio >= 0.8:
+        win_prob = 25.0 + (ratio - 0.8) * 125
     elif ratio >= 0.6:
-        win_prob = 20.0 + (ratio - 0.6) * 75
+        win_prob = 8.0 + (ratio - 0.6) * 85
     elif ratio >= 0.3:
-        win_prob = 5.0 + (ratio - 0.3) * 25
+        win_prob = 3.0 + (ratio - 0.3) * 16.7
     else:
-        win_prob = 3.0
+        win_prob = 2.0
 
-    return round(min(95, max(5, win_prob)), 1)
+    return round(min(95, max(2, win_prob)), 1)
+
 
 
 def calculate_collapse_risk(state: MatchState) -> str:
